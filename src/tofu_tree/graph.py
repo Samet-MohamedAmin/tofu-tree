@@ -14,12 +14,12 @@ from typing import Any
 ACTION_SYMBOLS: dict[str, str] = {
     "created": "+",
     "destroyed": "-",
-    "replaced": "~",
+    "replaced": "±",
     "updated": "~",
 }
 
-# Symbol priority for aggregation (order matters: create > destroy > modify)
-SYMBOL_PRIORITY: list[str] = ["+", "-", "~"]
+# Symbol priority for aggregation (order matters: create > destroy > replace > update)
+SYMBOL_PRIORITY: list[str] = ["+", "-", "±", "~"]
 
 
 class ResourceGraph:
@@ -253,7 +253,7 @@ def parse_plan_output(lines: list[str]) -> list[dict[str, str]]:
     in_plan_section = False
 
     resource_pattern = re.compile(
-        r"^\s*#\s+(.+?)\s+will be\s+(created|destroyed|replaced|updated)"
+        r"^\s*#\s+(.+?)\s+(?:will be|must be)\s+(created|destroyed|replaced|updated)"
     )
 
     for line in lines:
