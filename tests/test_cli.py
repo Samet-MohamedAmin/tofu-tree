@@ -116,7 +116,7 @@ class TestMainFunction:
 
             result = output.getvalue()
             assert "aws_instance" in result
-            assert "2 resources to be created" in result
+            assert "2 to be created" in result
 
     def test_main_no_resources(self) -> None:
         """Test main when no resources found."""

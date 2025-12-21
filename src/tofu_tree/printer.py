@@ -95,9 +95,8 @@ def collect_symbols_from_node(node: dict[str, Any] | list[Any]) -> set[str]:
         if "children" in node:
             symbols.update(collect_symbols_from_node(node["children"]))
         for key, value in node.items():
-            if key not in ["resources", "children"]:
-                if isinstance(value, (dict, list)):
-                    symbols.update(collect_symbols_from_node(value))
+            if key not in ["resources", "children"] and isinstance(value, (dict, list)):
+                symbols.update(collect_symbols_from_node(value))
 
     return symbols
 

@@ -15,7 +15,7 @@ from tofu_tree.graph import (
 )
 from tofu_tree.printer import TreePrinter, color_symbol
 
-__version__ = "0.2.1"
+__version__ = "0.3.3"
 __author__ = "Mohamed Amin"
 __email__ = "your.email@example.com"
 

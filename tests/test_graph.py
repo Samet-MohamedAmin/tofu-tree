@@ -17,7 +17,7 @@ class TestActionSymbols:
         """Test that action symbols are correctly mapped."""
         assert ACTION_SYMBOLS["created"] == "+"
         assert ACTION_SYMBOLS["destroyed"] == "-"
-        assert ACTION_SYMBOLS["replaced"] == "~"
+        assert ACTION_SYMBOLS["replaced"] == "±"
         assert ACTION_SYMBOLS["updated"] == "~"
 
     def test_action_symbols_complete(self) -> None:
@@ -65,15 +65,15 @@ class TestParsePlanOutput:
             "OpenTofu will perform the following actions:\n",
             "  # resource.create will be created\n",
             "  # resource.destroy will be destroyed\n",
-            "  # resource.replace will be replaced\n",
-            "  # resource.update will be updated in-place\n",
+            "  # resource.replace must be replaced\n",
+            "  # resource.update will be updated\n",
         ]
         resources = parse_plan_output(lines)
 
         assert len(resources) == 4
         assert resources[0]["symbol"] == "+"
         assert resources[1]["symbol"] == "-"
-        assert resources[2]["symbol"] == "~"
+        assert resources[2]["symbol"] == "±"
         assert resources[3]["symbol"] == "~"
 
     def test_parse_indexed_resources(self) -> None:

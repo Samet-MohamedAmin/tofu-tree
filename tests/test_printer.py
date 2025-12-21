@@ -157,9 +157,10 @@ class TestTreePrinterSummary:
             printer.print_summary([])
 
         result = output.getvalue()
-        assert "0 resources to be created" in result
-        assert "0 resources to be destroyed" in result
-        assert "0 resources to be replaced/updated" in result
+        assert "0 to be created" in result
+        assert "0 to be destroyed" in result
+        assert "0 to be replaced" in result
+        assert "0 to be updated" in result
 
     def test_print_summary_counts(self) -> None:
         """Test summary counts resources correctly."""
@@ -168,7 +169,7 @@ class TestTreePrinterSummary:
             {"address": "a.2", "action": "created", "symbol": "+"},
             {"address": "b.1", "action": "destroyed", "symbol": "-"},
             {"address": "c.1", "action": "updated", "symbol": "~"},
-            {"address": "c.2", "action": "replaced", "symbol": "~"},
+            {"address": "c.2", "action": "replaced", "symbol": "±"},
         ]
         printer = TreePrinter(use_color=False)
 
@@ -177,9 +178,10 @@ class TestTreePrinterSummary:
             printer.print_summary(resources)
 
         result = output.getvalue()
-        assert "2 resources to be created" in result
-        assert "1 resources to be destroyed" in result
-        assert "2 resources to be replaced/updated" in result
+        assert "2 to be created" in result
+        assert "1 to be destroyed" in result
+        assert "1 to be replaced" in result
+        assert "1 to be updated" in result
 
     def test_print_summary_with_color(self) -> None:
         """Test summary with color enabled."""
@@ -225,13 +227,16 @@ class TestTreePrinterHelpers:
 
     def test_format_symbol_empty(self) -> None:
         """Test formatting empty symbol."""
-        printer = TreePrinter()
-        assert printer._format_symbol("") == ""
+        from tofu_tree.printer import format_symbols
+
+        result = format_symbols(set(), use_color=False)
+        assert result == ""
 
     def test_format_symbol_with_color(self) -> None:
         """Test formatting symbol with color."""
-        printer = TreePrinter(use_color=True)
-        result = printer._format_symbol("+")
+        from tofu_tree.printer import format_symbols
+
+        result = format_symbols({"+"}, use_color=True)
 
         assert COLOR_GREEN in result
         assert " " in result  # Has trailing space
