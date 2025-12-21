@@ -20,6 +20,10 @@
   Transform your <code>terraform plan</code> or <code>tofu plan</code> output into an easy-to-read hierarchical tree structure with color-coded change indicators.
 </p>
 
+<p align="center">
+  <img src="https://raw.githubusercontent.com/Samet-MohamedAmin/tofu-tree/main/assets/screenshot-demo.png" alt="screenshot showing tofu-tree output" width="700">
+</p>
+
 ---
 
 ## ✨ Features
