@@ -10,12 +10,11 @@ from __future__ import annotations
 import re
 from typing import Any
 
-from tofu_tree.graph import ResourceGraph
-
 # ANSI color codes
 COLOR_GREEN = "\033[32m"
 COLOR_RED = "\033[31m"
 COLOR_YELLOW = "\033[33m"
+COLOR_MAGENTA = "\033[35m"
 COLOR_RESET = "\033[0m"
 
 # Position types
@@ -58,11 +57,68 @@ def color_symbol(symbol: str, use_color: bool = False) -> str:
     color_map = {
         "+": COLOR_GREEN,
         "-": COLOR_RED,
+        "±": COLOR_MAGENTA,
         "~": COLOR_YELLOW,
     }
 
     color_code = color_map.get(symbol, "")
     return f"{color_code}{symbol}{COLOR_RESET}" if color_code else symbol
+
+
+# Symbol display order for concatenation
+SYMBOL_ORDER: list[str] = ["+", "-", "±", "~"]
+
+
+def collect_symbols_from_node(node: dict[str, Any] | list[Any]) -> set[str]:
+    """
+    Recursively collect all unique symbols from a node.
+
+    Args:
+        node: A tree node (dict or list)
+
+    Returns:
+        Set of unique symbol strings found in the node.
+    """
+    symbols: set[str] = set()
+
+    if isinstance(node, list):
+        for item in node:
+            if isinstance(item, dict):
+                if "resource" in item:
+                    symbols.add(item["resource"]["symbol"])
+                if "children" in item:
+                    symbols.update(collect_symbols_from_node(item["children"]))
+    elif isinstance(node, dict):
+        if "resources" in node:
+            for r in node["resources"]:
+                symbols.add(r["symbol"])
+        if "children" in node:
+            symbols.update(collect_symbols_from_node(node["children"]))
+        for key, value in node.items():
+            if key not in ["resources", "children"]:
+                if isinstance(value, (dict, list)):
+                    symbols.update(collect_symbols_from_node(value))
+
+    return symbols
+
+
+def format_symbols(symbols: set[str], use_color: bool = False) -> str:
+    """
+    Format a set of symbols as a concatenated, colored string.
+
+    Args:
+        symbols: Set of symbols to format
+        use_color: Whether to apply ANSI colors
+
+    Returns:
+        Concatenated symbols in order, with colors if enabled.
+    """
+    if not symbols:
+        return ""
+
+    ordered = [s for s in SYMBOL_ORDER if s in symbols]
+    colored = [color_symbol(s, use_color) for s in ordered]
+    return "".join(colored) + " "
 
 
 class TreePrinter:
@@ -138,13 +194,6 @@ class TreePrinter:
         """Get sorted keys excluding internal keys."""
         return sorted([k for k in node if k not in ["children", "resources"]])
 
-    def _format_symbol(self, symbol: str) -> str:
-        """Format symbol with color if enabled."""
-        if not symbol:
-            return ""
-        colored = color_symbol(symbol, self.use_color)
-        return f"{colored} "
-
     def _print_list_node(
         self,
         value: list[Any],
@@ -154,10 +203,8 @@ class TreePrinter:
         is_root_level: bool,
     ) -> None:
         """Print a node that contains a list of indexed items."""
-        all_symbols = self._collect_symbols_from_list(value)
-        symbol_str = self._format_symbol(
-            ResourceGraph.get_aggregate_symbol(all_symbols)
-        )
+        symbols = collect_symbols_from_node(value)
+        symbol_str = format_symbols(symbols, self.use_color)
 
         if is_root_level:
             print(f"{symbol_str}{key}")
@@ -212,12 +259,8 @@ class TreePrinter:
         child_keys = sorted([k for k in children if k != "resources"])
         has_resources = "resources" in children
 
-        all_symbols = self._collect_symbols_from_dict_with_children(
-            children, child_keys
-        )
-        symbol_str = self._format_symbol(
-            ResourceGraph.get_aggregate_symbol(all_symbols)
-        )
+        symbols = collect_symbols_from_node(value)
+        symbol_str = format_symbols(symbols, self.use_color)
 
         if is_root_level:
             print(f"{symbol_str}{key}")
@@ -258,18 +301,14 @@ class TreePrinter:
 
             child_value = children[child_key]
             if isinstance(child_value, dict) and "children" in child_value:
-                child_symbols = ResourceGraph.get_resource_symbols(child_value)
-                child_symbol_str = self._format_symbol(
-                    ResourceGraph.get_aggregate_symbol(child_symbols)
-                )
+                child_symbols = collect_symbols_from_node(child_value)
+                child_symbol_str = format_symbols(child_symbols, self.use_color)
                 print(f"{child_prefix}{child_symbol_str}{child_key}")
                 self.print_tree(child_value["children"], child_next_inherited)
             elif isinstance(child_value, list):
-                all_symbols = self._collect_symbols_from_list(child_value)
-                symbol_str = self._format_symbol(
-                    ResourceGraph.get_aggregate_symbol(all_symbols)
-                )
-                print(f"{child_prefix}{symbol_str}{child_key}")
+                child_symbols = collect_symbols_from_node(child_value)
+                child_symbol_str = format_symbols(child_symbols, self.use_color)
+                print(f"{child_prefix}{child_symbol_str}{child_key}")
                 sorted_items = sorted(child_value, key=lambda x: x.get("key", ""))
                 for k, item in enumerate(sorted_items):
                     item_position = self._get_position(k, len(sorted_items))
@@ -294,10 +333,8 @@ class TreePrinter:
         is_root_level: bool,
     ) -> None:
         """Print a dict node that has resources."""
-        all_symbols = [r["symbol"] for r in value["resources"]]
-        symbol_str = self._format_symbol(
-            ResourceGraph.get_aggregate_symbol(all_symbols)
-        )
+        symbols = collect_symbols_from_node(value)
+        symbol_str = format_symbols(symbols, self.use_color)
 
         if is_root_level:
             print(f"{symbol_str}{key}")
@@ -331,10 +368,8 @@ class TreePrinter:
         is_root_level: bool,
     ) -> None:
         """Print a dict node without explicit children or resources."""
-        all_symbols = ResourceGraph.get_resource_symbols(value)
-        symbol_str = self._format_symbol(
-            ResourceGraph.get_aggregate_symbol(all_symbols)
-        )
+        symbols = collect_symbols_from_node(value)
+        symbol_str = format_symbols(symbols, self.use_color)
 
         if is_root_level:
             print(f"{symbol_str}{key}")
@@ -383,30 +418,6 @@ class TreePrinter:
         """Extract resource name from address, removing index brackets."""
         return re.sub(r"\[.*\]", "", address.split(".")[-1])
 
-    def _collect_symbols_from_list(self, items: list[Any]) -> list[str]:
-        """Collect all symbols from a list of items."""
-        symbols: list[str] = []
-        for item in items:
-            if "resource" in item:
-                symbols.append(item["resource"]["symbol"])
-            elif "children" in item:
-                symbols.extend(ResourceGraph.get_resource_symbols(item["children"]))
-        return symbols
-
-    def _collect_symbols_from_dict_with_children(
-        self, children: dict[str, Any], child_keys: list[str]
-    ) -> list[str]:
-        """Collect symbols from a dict with children."""
-        all_symbols: list[str] = []
-
-        if "resources" in children:
-            all_symbols.extend([r["symbol"] for r in children["resources"]])
-
-        for child_key in child_keys:
-            all_symbols.extend(ResourceGraph.get_resource_symbols(children[child_key]))
-
-        return all_symbols
-
     def print_summary(self, resources: list[dict[str, str]]) -> None:
         """
         Print summary of resource changes.
@@ -419,23 +430,19 @@ class TreePrinter:
 
         created_symbol = color_symbol("+", self.use_color)
         destroyed_symbol = color_symbol("-", self.use_color)
-        modified_symbol = color_symbol("~", self.use_color)
+        replaced_symbol = color_symbol("±", self.use_color)
+        updated_symbol = color_symbol("~", self.use_color)
 
-        print(
-            f"{created_symbol} {counts['+']:{SUMMARY_WIDTH}d} resources to be created"
-        )
-        print(
-            f"{destroyed_symbol} {counts['-']:{SUMMARY_WIDTH}d} resources to be destroyed"
-        )
-        print(
-            f"{modified_symbol} {counts['~']:{SUMMARY_WIDTH}d} resources to be replaced/updated"
-        )
+        print(f"{created_symbol} {counts['+']:{SUMMARY_WIDTH}d} to be created")
+        print(f"{destroyed_symbol} {counts['-']:{SUMMARY_WIDTH}d} to be destroyed")
+        print(f"{replaced_symbol} {counts['±']:{SUMMARY_WIDTH}d} to be replaced")
+        print(f"{updated_symbol} {counts['~']:{SUMMARY_WIDTH}d} to be updated")
 
     def _count_resources_by_symbol(
         self, resources: list[dict[str, str]]
     ) -> dict[str, int]:
         """Count resources grouped by their symbol."""
-        counts: dict[str, int] = {"+": 0, "-": 0, "~": 0}
+        counts: dict[str, int] = {"+": 0, "-": 0, "±": 0, "~": 0}
 
         for resource in resources:
             symbol = resource.get("symbol", "?")

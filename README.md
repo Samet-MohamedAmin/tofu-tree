@@ -20,16 +20,13 @@
   Transform your <code>terraform plan</code> or <code>tofu plan</code> output into an easy-to-read hierarchical tree structure with color-coded change indicators.
 </p>
 
-<p align="center">
-  <img src="https://raw.githubusercontent.com/Samet-MohamedAmin/tofu-tree/main/assets/screenshot-demo.png" alt="screenshot showing tofu-tree output" width="700">
-</p>
 
 ---
 
 ## ✨ Features
 
 - 🌳 **Beautiful Tree Output** — Visualize your Terraform plan as a clean, hierarchical tree
-- 🎨 **Color-Coded Symbols** — Instantly see what's being created (+), destroyed (-), or modified (~)
+- 🎨 **Color-Coded Symbols** — Instantly see what's being created (+), destroyed (-), replaced (±), or updated (~)
 - 🔄 **Auto-Detection** — Automatically finds and runs `tofu` or `terraform` in your PATH
 - 📊 **Summary Statistics** — Quick overview of total changes at a glance
 - 📦 **Zero Dependencies** — Pure Python, works out of the box
@@ -88,58 +85,49 @@ options:
 ## 🎬 Example Output
 
 ```
-+ local_file
-│  ├── + config_files
-│  │   ├── + config_files: app
-│  │   ├── + config_files: cache
-│  │   └── + config_files: db
++-± local_file
+│  ├── - nested_docs
+│  │   ├── - nested_docs: changelog
+│  │   ├── - nested_docs: license
+│  │   └── - nested_docs: readme
 │  │
-│  ├── + nested_docs
-│  │   ├── + nested_docs: changelog
-│  │   ├── + nested_docs: license
-│  │   └── + nested_docs: readme
+│  ├── + nested_docs_2
+│  │   ├── + nested_docs_2: changelog
+│  │   ├── + nested_docs_2: license
+│  │   └── + nested_docs_2: readme
 │  │
-│  └── + scripts
-│      ├── + scripts: backup
-│      └── + scripts: deploy
-│
-+ module.nested_module
-│  └── + local_file
-│      ├── + health_checks
-│      │   ├── + health_checks: api
-│      │   ├── + health_checks: web
-│      │   └── + health_checks: worker
-│      │
-│      ├── + service_configs
-│      │   ├── + service_configs: api
-│      │   ├── + service_configs: web
-│      │   └── + service_configs: worker
-│      │
-│      └── + service_deployments
-│          ├── + service_deployments: api
-│          ├── + service_deployments: web
-│          └── + service_deployments: worker
+│  └── +-± scripts
+│      ├── - scripts: backup
+│      ├── + scripts: create
+│      └── ± scripts: deploy
 │
 
-+ 20 resources to be created
--  0 resources to be destroyed
-~  0 resources to be replaced/updated
++   4 to be created
+-   4 to be destroyed
+±   1 to be replaced
+~   0 to be updated
 ```
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/Samet-MohamedAmin/tofu-tree/main/assets/screenshot-demo.png" alt="screenshot showing tofu-tree output" width="700">
+</p>
+
 
 ### Symbol Legend
 
 | Symbol | Color  | Meaning |
 |--------|--------|---------|
-| `+`    | 🟢 Green  | Resource will be created |
-| `-`    | 🔴 Red    | Resource will be destroyed |
-| `~`    | 🟡 Yellow | Resource will be modified/replaced |
+| `+`    | 🟢 Green   | Resource will be created |
+| `-`    | 🔴 Red     | Resource will be destroyed |
+| `±`    | 🟣 Magenta | Resource will be replaced (destroy + create) |
+| `~`    | 🟡 Yellow  | Resource will be updated in-place |
 
 ## 🔧 How It Works
 
 1. **Parse** — Reads Terraform/OpenTofu plan output (concise format with `-concise` flag)
 2. **Build** — Constructs a hierarchical graph from resource addresses
 3. **Display** — Renders the graph as a tree with proper connectors (├──, └──)
-4. **Summarize** — Shows counts of created, destroyed, and modified resources
+4. **Summarize** — Shows counts of created, destroyed, replaced, and updated resources
 
 ## 🤝 Contributing
 
