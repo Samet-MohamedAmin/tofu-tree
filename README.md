@@ -159,6 +159,8 @@ ruff check src tests
 mypy src/tofu_tree
 ```
 
+> If you like the idea please upvote this feature request [Add short concise tree view output option for tofu plan #3619](https://github.com/opentofu/opentofu/issues/3619)
+
 ## 📄 License
 
 Hippocratic License 3.0 — see [LICENSE](LICENSE) for details.
