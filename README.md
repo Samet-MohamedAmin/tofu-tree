@@ -109,7 +109,7 @@ options:
 ```
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/Samet-MohamedAmin/tofu-tree/main/assets/screenshot-demo.png" alt="screenshot showing tofu-tree output" width="700">
+  <img src="https://raw.githubusercontent.com/Samet-MohamedAmin/tofu-tree/main/assets/screenshot-demo.png" alt="screenshot showing tofu-tree output">
 </p>
 
 
