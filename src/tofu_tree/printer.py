@@ -156,6 +156,11 @@ class TreePrinter:
         keys = self._get_sorted_keys(node)
         is_root_level = inherited_prefix == ""
 
+        # Handle case where node only has "resources" (leaf node with no other keys)
+        if "resources" in node and not keys:
+            self._print_resources_leaf(node["resources"], inherited_prefix)
+            return
+
         for i, key in enumerate(keys):
             value = node[key]
 
@@ -392,6 +397,29 @@ class TreePrinter:
         elif "children" in item:
             print(f"{item_prefix}{item['key']}")
             self.print_tree(item["children"], item_next_inherited)
+
+    def _print_resources_leaf(
+        self,
+        resources: list[dict[str, str]],
+        inherited_prefix: str,
+    ) -> None:
+        """Print resources when they are the only content in a node."""
+        sorted_resources = sorted(
+            resources, key=lambda r: self._extract_resource_name(r["address"])
+        )
+
+        for k, resource in enumerate(sorted_resources):
+            res_position = self._get_position(k, len(sorted_resources))
+            res_connector = CONNECTORS[res_position]
+            res_prefix = inherited_prefix + res_connector
+            res_next_inherited = inherited_prefix + INHERITED[res_position]
+
+            name = self._extract_resource_name(resource["address"])
+            colored_symbol = color_symbol(resource["symbol"], self.use_color)
+            print(f"{res_prefix}{colored_symbol} {name}")
+
+            if res_position in (LAST, ONLY):
+                print(res_next_inherited)
 
     def _get_position(self, index: int, total: int) -> str:
         """

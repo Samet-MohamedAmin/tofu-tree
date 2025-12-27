@@ -1,0 +1,10 @@
+-±~ module.secret_rotation
+│  ├── ~ google_cloudfunctions2_function
+│  ├── ~ google_secret_manager_secret
+│  ├── - google_secret_manager_secret_version
+│  └── ± google_storage_bucket_object
+
++   0 to be created
+-   1 to be destroyed
+±   1 to be replaced
+~   2 to be updated
