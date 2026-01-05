@@ -85,26 +85,34 @@ options:
 ## 🎬 Example Output
 
 ```
-+-± local_file
-│  ├── - nested_docs
-│  │   ├── - nested_docs: changelog
-│  │   ├── - nested_docs: license
-│  │   └── - nested_docs: readme
-│  │
-│  ├── + nested_docs_2
-│  │   ├── + nested_docs_2: changelog
-│  │   ├── + nested_docs_2: license
-│  │   └── + nested_docs_2: readme
-│  │
-│  └── +-± scripts
-│      ├── - scripts: backup
-│      ├── + scripts: create
-│      └── ± scripts: deploy
-│
+$ tofu-tree .
++ local_file.bla
 
-+   4 to be created
--   4 to be destroyed
-±   1 to be replaced
++ local_file.config_files
+│  ├── + app
+│  ├── + cache
+│  └── + db
+│      
++ module.nested_module
+│  ├── + local_file.health_checks
+│  │   ├── + api
+│  │   ├── + web
+│  │   └── + worker
+│  │       
+│  ├── + local_file.service_configs
+│  │   ├── + api
+│  │   ├── + web
+│  │   └── + worker
+│  │       
+│  └── + local_file.service_deployments
+│      ├── + api
+│      ├── + web
+│      └── + worker
+│          
+
++  13 to be created
+-   0 to be destroyed
+±   0 to be replaced
 ~   0 to be updated
 ```
 

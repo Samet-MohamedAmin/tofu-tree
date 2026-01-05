@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "tofu-tree"
-version = "0.3.4"
+version = "0.3.5"
 description = "A beautiful tree visualization tool for Terraform/OpenTofu plan output"
 readme = "README.md"
 requires-python = ">=3.9"

@@ -104,7 +104,7 @@ For more information, visit: https://github.com/yourusername/tofu-tree
         "-V",
         "--version",
         action="version",
-        version="%(prog)s 0.3.4",
+        version="%(prog)s 0.3.5",
     )
     parser.add_argument(
         "--no-color",

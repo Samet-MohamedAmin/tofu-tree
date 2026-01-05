@@ -21,15 +21,20 @@ resource "local_file" "config_files" {
   filename = "${path.module}/configs/${each.key}.conf"
 }
 
-resource "local_file" "scripts" {
-  for_each = {
-    "deploy" = "#!/bin/bash\necho deploying"
-    "backup" = "#!/bin/bash\necho backing up"
-  }
-  
-  content  = each.value
-  filename = "${path.module}/scripts/${each.key}.sh"
+resource "local_file" "bla" {
+  content  = "bla"
+  filename = "${path.module}/bla.md"
 }
+
+# resource "local_file" "scripts" {
+#   for_each = {
+#     "deploy" = "#!/bin/bash\necho deploying"
+#     "backup" = "#!/bin/bash\necho backing up"
+#   }
+  
+#   content  = each.value
+#   filename = "${path.module}/scripts/${each.key}.sh"
+# }
 
 # Module with nested resources
 module "nested_module" {
@@ -43,25 +48,31 @@ module "nested_module" {
   }
 }
 
-# Another module instance
-module "nested_module_staging" {
-  source = "./modules/nested_module"
-  
-  environment = "staging"
-  services = {
-    "web" = { port = 80, replicas = 1 }
-  }
-}
 
-# Direct nested resources
-resource "local_file" "nested_docs" {
-  for_each = {
-    "readme" = "# Documentation"
-    "changelog" = "# Changelog"
-    "license" = "MIT License"
-  }
+# module "nested_module_staging" {
+#   source = "./modules/nested_module"
   
-  content  = each.value
-  filename = "${path.module}/docs/${each.key}.md"
-}
+#   environment = "staging"
+#   services = {
+#     "web" = { port = 80, replicas = 1 }
+#   }
+# }
+
+
+
+# Another module instance
+
+# # Direct nested resources
+# resource "local_file" "nested_docs" {
+#   for_each = {
+#     "readme" = "# Documentation"
+#     "changelog" = "# Changelog"
+#     "license" = "MIT License"
+#   }
+  
+#   content  = each.value
+#   filename = "${path.module}/docs/${each.key}.md"
+# }
+
+
 

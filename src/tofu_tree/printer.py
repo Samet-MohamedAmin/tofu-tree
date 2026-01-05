@@ -263,6 +263,134 @@ class TreePrinter:
         child_keys = sorted([k for k in children if k != "resources"])
         has_resources = "resources" in children
 
+        # If only resources (no child keys), combine type and name on same line
+        if has_resources and not child_keys:
+            resources = children["resources"]
+            sorted_resources = sorted(
+                resources, key=lambda r: self._extract_resource_name(r["address"])
+            )
+            for k, resource in enumerate(sorted_resources):
+                res_position = self._get_position(k, len(sorted_resources))
+                if is_root_level:
+                    res_prefix = ""
+                    res_next_inherited = ""
+                else:
+                    res_connector = CONNECTORS[res_position]
+                    res_prefix = current_prefix[:-4] + res_connector
+                    res_next_inherited = current_prefix[:-4] + INHERITED[res_position]
+
+                name = self._extract_resource_name(resource["address"])
+                colored_symbol = color_symbol(resource["symbol"], self.use_color)
+                print(f"{res_prefix}{colored_symbol} {key}.{name}")
+
+                if res_position in (LAST, ONLY) and res_next_inherited:
+                    print(res_next_inherited)
+            return
+
+        # Check if children are only simple types (lists or leaf dicts with only resources)
+        # If so, flatten them all with parent prefix
+        all_children_are_flat = child_keys and all(
+            isinstance(children[k], list)
+            or (
+                isinstance(children[k], dict)
+                and "children" in children[k]
+                and "resources" in children[k]["children"]
+                and not any(
+                    kk not in ["resources", "children"]
+                    for kk in children[k]["children"]
+                )
+            )
+            for k in child_keys
+        )
+
+        is_module = key.startswith("module.")
+        should_flatten = all_children_are_flat or (has_resources and not child_keys)
+
+        if should_flatten:
+            all_items: list[tuple[str, Any]] = []
+
+            # Add non-indexed resources
+            if has_resources:
+                for resource in children["resources"]:
+                    name = self._extract_resource_name(resource["address"])
+                    all_items.append(("resource", name, resource))
+
+            # Add indexed resources (lists) and leaf dicts
+            for child_key in child_keys:
+                child_value = children[child_key]
+                if isinstance(child_value, list):
+                    all_items.append(("list", child_key, child_value))
+                elif isinstance(child_value, dict) and "children" in child_value:
+                    child_children = child_value["children"]
+                    if "resources" in child_children:
+                        for resource in child_children["resources"]:
+                            name = self._extract_resource_name(resource["address"])
+                            all_items.append(
+                                ("resource", f"{child_key}.{name}", resource)
+                            )
+
+            # Sort items
+            all_items.sort(key=lambda x: x[1])
+
+            # For modules at root, print module header first
+            if is_module and is_root_level:
+                symbols = collect_symbols_from_node(value)
+                symbol_str = format_symbols(symbols, self.use_color)
+                print(f"{symbol_str}{key}")
+                base_inherited = "│  "
+            else:
+                base_inherited = next_inherited
+
+            for idx, item in enumerate(all_items):
+                item_type, item_key, item_value = item
+                item_position = self._get_position(idx, len(all_items))
+
+                if is_module and is_root_level:
+                    item_connector = CONNECTORS[item_position]
+                    item_prefix = base_inherited + item_connector
+                    item_next_inherited = base_inherited + INHERITED[item_position]
+                elif is_root_level:
+                    item_prefix = ""
+                    item_next_inherited = ""
+                else:
+                    item_connector = CONNECTORS[item_position]
+                    item_prefix = current_prefix[:-4] + item_connector
+                    item_next_inherited = current_prefix[:-4] + INHERITED[item_position]
+
+                if item_type == "resource":
+                    colored_symbol = color_symbol(item_value["symbol"], self.use_color)
+                    if is_module and is_root_level:
+                        print(f"{item_prefix}{colored_symbol} {item_key}")
+                    else:
+                        print(f"{item_prefix}{colored_symbol} {key}.{item_key}")
+                    if is_root_level and not is_module:
+                        print()
+                    elif item_position in (LAST, ONLY):
+                        print(item_next_inherited)
+                elif item_type == "list":
+                    list_symbols = collect_symbols_from_node(item_value)
+                    list_symbol_str = format_symbols(list_symbols, self.use_color)
+                    if is_module and is_root_level:
+                        print(f"{item_prefix}{list_symbol_str}{item_key}")
+                    else:
+                        print(f"{item_prefix}{list_symbol_str}{key}.{item_key}")
+
+                    if is_root_level and not is_module:
+                        list_next_inherited = "│  "
+                    else:
+                        list_next_inherited = item_next_inherited
+
+                    sorted_items = sorted(item_value, key=lambda x: x.get("key", ""))
+                    for k, list_item in enumerate(sorted_items):
+                        li_position = self._get_position(k, len(sorted_items))
+                        li_connector = CONNECTORS[li_position]
+                        li_prefix = list_next_inherited + li_connector
+                        li_next_inherited = list_next_inherited + INHERITED[li_position]
+                        self._print_list_item(list_item, li_prefix, li_next_inherited)
+                        if li_position in (LAST, ONLY):
+                            print(li_next_inherited)
+            return
+
         symbols = collect_symbols_from_node(value)
         symbol_str = format_symbols(symbols, self.use_color)
 
@@ -305,10 +433,73 @@ class TreePrinter:
 
             child_value = children[child_key]
             if isinstance(child_value, dict) and "children" in child_value:
-                child_symbols = collect_symbols_from_node(child_value)
-                child_symbol_str = format_symbols(child_symbols, self.use_color)
-                print(f"{child_prefix}{child_symbol_str}{child_key}")
-                self.print_tree(child_value["children"], child_next_inherited)
+                child_children = child_value["children"]
+                # Check if this is a leaf node with only resources (no nested keys)
+                child_child_keys = [
+                    k for k in child_children if k not in ["children", "resources"]
+                ]
+                if "resources" in child_children and not child_child_keys:
+                    # Combine resource type and name on same line
+                    resources = child_children["resources"]
+                    sorted_resources = sorted(
+                        resources,
+                        key=lambda r: self._extract_resource_name(r["address"]),
+                    )
+                    for k, resource in enumerate(sorted_resources):
+                        # Adjust position based on whether this is last child
+                        if j == len(child_keys) - 1:
+                            res_position = self._get_position(k, len(sorted_resources))
+                        else:
+                            res_position = FIRST if k == 0 else MIDDLE
+                        res_connector = CONNECTORS[res_position]
+                        res_prefix = next_inherited + res_connector
+                        res_next_inherited = next_inherited + INHERITED[res_position]
+
+                        name = self._extract_resource_name(resource["address"])
+                        colored_symbol = color_symbol(resource["symbol"], self.use_color)
+                        print(f"{res_prefix}{colored_symbol} {child_key}.{name}")
+
+                        if res_position in (LAST, ONLY):
+                            print(res_next_inherited)
+                # Check if children are only lists (indexed resources)
+                elif all(
+                    isinstance(child_children.get(k), list)
+                    for k in child_child_keys
+                ):
+                    # Combine parent.child and print list items under it
+                    for kk, grandchild_key in enumerate(sorted(child_child_keys)):
+                        grandchild_value = child_children[grandchild_key]
+                        gc_position = self._get_position(kk, len(child_child_keys))
+                        if j == len(child_keys) - 1:
+                            gc_position = self._get_position(kk, len(child_child_keys))
+                        else:
+                            gc_position = FIRST if kk == 0 else MIDDLE
+                        gc_connector = CONNECTORS[gc_position]
+                        gc_prefix = next_inherited + gc_connector
+                        gc_next_inherited = next_inherited + INHERITED[gc_position]
+
+                        gc_symbols = collect_symbols_from_node(grandchild_value)
+                        gc_symbol_str = format_symbols(gc_symbols, self.use_color)
+                        print(f"{gc_prefix}{gc_symbol_str}{child_key}.{grandchild_key}")
+
+                        sorted_items = sorted(
+                            grandchild_value, key=lambda x: x.get("key", "")
+                        )
+                        for m, item in enumerate(sorted_items):
+                            item_position = self._get_position(m, len(sorted_items))
+                            item_connector = CONNECTORS[item_position]
+                            item_prefix = gc_next_inherited + item_connector
+                            item_next_inherited = (
+                                gc_next_inherited + INHERITED[item_position]
+                            )
+                            self._print_list_item(item, item_prefix, item_next_inherited)
+                            if item_position in (LAST, ONLY):
+                                print(item_next_inherited)
+                else:
+                    child_symbols = collect_symbols_from_node(child_value)
+                    child_symbol_str = format_symbols(child_symbols, self.use_color)
+                    print(f"{child_prefix}{child_symbol_str}{child_key}")
+                    self.print_tree(child_children, child_next_inherited)
             elif isinstance(child_value, list):
                 child_symbols = collect_symbols_from_node(child_value)
                 child_symbol_str = format_symbols(child_symbols, self.use_color)
@@ -337,24 +528,30 @@ class TreePrinter:
         is_root_level: bool,
     ) -> None:
         """Print a dict node that has resources."""
-        symbols = collect_symbols_from_node(value)
-        symbol_str = format_symbols(symbols, self.use_color)
-
-        if is_root_level:
-            print(f"{symbol_str}{key}")
-        else:
-            print(f"{current_prefix}{symbol_str}{key}")
-
         resources = value["resources"]
         sorted_resources = sorted(
             resources, key=lambda r: self._extract_resource_name(r["address"])
         )
 
+        # Print resource type and name on same line (e.g., random_string.updatable)
         for k, resource in enumerate(sorted_resources):
             res_position = self._get_position(k, len(sorted_resources))
-            res_connector = CONNECTORS[res_position]
-            res_prefix = next_inherited + res_connector
-            res_next_inherited = next_inherited + INHERITED[res_position]
+            if is_root_level:
+                res_prefix = ""
+            else:
+                res_connector = CONNECTORS[res_position]
+                res_prefix = current_prefix[:-4] + res_connector  # Adjust prefix
+            res_next_inherited = (
+                current_prefix[:-4] + INHERITED[res_position] if not is_root_level else ""
+            )
+
+            name = self._extract_resource_name(resource["address"])
+            colored_symbol = color_symbol(resource["symbol"], self.use_color)
+            print(f"{res_prefix}{colored_symbol} {key}.{name}")
+
+            if res_position in (LAST, ONLY):
+                if res_next_inherited:
+                    print(res_next_inherited)
 
             name = self._extract_resource_name(resource["address"])
             colored_symbol = color_symbol(resource["symbol"], self.use_color)
@@ -391,9 +588,9 @@ class TreePrinter:
         """Print a single item from a list node."""
         if "resource" in item:
             resource = item["resource"]
-            resource_name = self._extract_resource_name(resource["address"])
             colored_symbol = color_symbol(resource["symbol"], self.use_color)
-            print(f"{item_prefix}{colored_symbol} {resource_name}: {item['key']}")
+            # Just show the key, not the resource name (parent already shown)
+            print(f"{item_prefix}{colored_symbol} {item['key']}")
         elif "children" in item:
             print(f"{item_prefix}{item['key']}")
             self.print_tree(item["children"], item_next_inherited)

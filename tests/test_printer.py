@@ -128,10 +128,10 @@ class TestTreePrinter:
         assert "aws_subnet" in result
 
     def test_print_tree_connectors(self) -> None:
-        """Test that tree connectors are present."""
+        """Test that tree connectors are present for indexed resources."""
         resources = [
-            {"address": "aws_instance.a", "action": "created", "symbol": "+"},
-            {"address": "aws_instance.b", "action": "created", "symbol": "+"},
+            {"address": 'aws_instance.web["a"]', "action": "created", "symbol": "+"},
+            {"address": 'aws_instance.web["b"]', "action": "created", "symbol": "+"},
         ]
         graph = build_graph(resources)
         printer = TreePrinter(use_color=False)
@@ -141,7 +141,7 @@ class TestTreePrinter:
             printer.print_tree(graph.get_tree())
 
         result = output.getvalue()
-        # Should have tree connectors
+        # Should have tree connectors for indexed resources
         assert "├" in result or "└" in result
 
 
